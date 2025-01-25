@@ -1,0 +1,4 @@
+flask==2.0.1
+openai-whisper
+torch
+opencc-python-reimplemented 

@@ -1,0 +1,8 @@
+whisper_app/
+├── static/
+│   └── style.css
+├── templates/
+│   └── index.html
+├── uploads/
+├── app.py
+└── requirements.txt 

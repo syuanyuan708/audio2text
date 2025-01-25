@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频转字幕</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4CAF50',
+                        secondary: '#2196F3'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <!-- 主题切换按钮 -->
+    <div class="fixed top-4 right-4">
+        <button id="themeToggle" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700">
+            <!-- 太阳图标 (亮色模式) -->
+            <svg id="lightIcon" class="w-6 h-6 hidden dark:block text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <!-- 月亮图标 (暗色模式) -->
+            <svg id="darkIcon" class="w-6 h-6 block dark:hidden text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold text-center text-gray-800 dark:text-white mb-8">音频转字幕工具</h1>
+            
+            <form id="uploadForm" class="space-y-6">
+                <div class="upload-area flex justify-center">
+                    <input type="file" id="file" name="file" accept="audio/*" required class="hidden">
+                    <label for="file" class="cursor-pointer px-6 py-3 bg-primary hover:bg-green-600 text-white rounded-lg transition-colors duration-200">
+                        选择音频文件
+                    </label>
+                </div>
+                
+                <button type="submit" id="submitBtn" disabled 
+                    class="w-full py-3 bg-secondary hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    开始转换
+                </button>
+            </form>
+
+            <div id="status" class="mt-4 text-center text-gray-600 dark:text-gray-300"></div>
+            
+            <div id="downloadArea" class="hidden mt-6 p-4 bg-green-50 dark:bg-green-900 rounded-lg">
+                <a id="downloadBtn" href="#" class="block w-full text-center py-3 bg-primary hover:bg-green-600 text-white rounded-lg transition-colors duration-200">
+                    下载字幕文件
+                </a>
+            </div>
+
+            <div class="text-sm text-center text-gray-500 dark:text-gray-400 mt-4">
+                支持的文件格式：MP3, WAV, OGG, M4A, MP4
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传成功弹窗 -->
+    <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md mx-auto mt-20 p-6">
+            <div class="text-right">
+                <span class="close cursor-pointer text-gray-500 dark:text-gray-400 text-2xl">&times;</span>
+            </div>
+            <div class="text-center space-y-4">
+                <div class="text-4xl">✅</div>
+                <h2 class="text-xl font-bold text-green-600 dark:text-green-400">文件上传成功！</h2>
+                <p class="text-gray-600 dark:text-gray-300">点击下一步开始转换字幕</p>
+                <button id="nextStepBtn" class="px-6 py-3 bg-primary hover:bg-green-600 text-white rounded-lg transition-colors duration-200">
+                    下一步
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 主题切换功能
+        const html = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        
+        // 检查本地存储的主题设置
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        } else {
+            html.classList.remove('dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+        });
+
+        // 原有的文件上传和处理逻辑
+        const fileInput = document.getElementById('file');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadModal = document.getElementById('uploadModal');
+        const closeBtn = document.querySelector('.close');
+        const nextStepBtn = document.getElementById('nextStepBtn');
+
+        fileInput.onchange = function() {
+            if (this.files.length > 0) {
+                uploadModal.classList.remove('hidden');
+            }
+        };
+
+        closeBtn.onclick = function() {
+            uploadModal.classList.add('hidden');
+            fileInput.value = '';
+        };
+
+        nextStepBtn.onclick = function() {
+            uploadModal.classList.add('hidden');
+            submitBtn.disabled = false;
+        };
+
+        window.onclick = function(event) {
+            if (event.target == uploadModal) {
+                uploadModal.classList.add('hidden');
+                fileInput.value = '';
+            }
+        };
+
+        document.getElementById('uploadForm').onsubmit = function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const status = document.getElementById('status');
+            const downloadArea = document.getElementById('downloadArea');
+            
+            submitBtn.disabled = true;
+            status.innerHTML = '<div class="text-blue-600 dark:text-blue-400">正在处理中，请稍候...</div>';
+            downloadArea.classList.add('hidden');
+            
+            fetch('{{ url_for("upload_file") }}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    status.innerHTML = `<div class="text-green-600 dark:text-green-400">${data.message}</div>`;
+                    downloadArea.classList.remove('hidden');
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    downloadBtn.href = '{{ url_for("download_file", filename="") }}' + data.filename;
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                status.innerHTML = `<div class="text-red-600 dark:text-red-400">错误：${error.message}</div>`;
+            });
+            
+            return false;
+        };
+    </script>
+</body>
+</html> 
